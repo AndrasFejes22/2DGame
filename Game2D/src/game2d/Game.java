@@ -4,8 +4,8 @@ import java.util.Random;
 
 public class Game {
 
-    static int height = 20;
-    static int width = 20;
+    static int height = 40;
+    static int width = 40;
     static int powerUpInLevel = height;
     static final int  GAME_LOOP_NUMBER = 300;
     static Random RANDOM = new Random(); //ha ez = new Random(100L); akkor nem változik a pálya mert álvéletlen számokat generál
@@ -24,6 +24,9 @@ public class Game {
         }while(!isPassable(level));
         
         System.out.println("The No " + isPassableCounter + " board is passable");
+        //overloaded isPassable() kirajzolja-e a csillagokat
+        isPassable(level, true);
+        
         ////////VIZSGÁLAT ELEJE///////
         //ez a 2 sor csak azt vizsgálja, hogy hányadik generálásra kapunk átjárható pályát, a fõ programban nem kell
         draw2DArray(level);
@@ -162,10 +165,15 @@ public class Game {
         }	
     }//main end
     
-    //Csak olyan pályát rajzoljon amiben nincsenek zárt terek:
+    static boolean isPassable(String[][] level) {
+		return isPassable(level, false);
+		
+	}
+
+	//Csak olyan pályát rajzoljon amiben nincsenek zárt terek:
     
     
-	static boolean isPassable(String[][] level) {
+	static boolean isPassable(String[][] level, boolean drawAsterisks) {
 		// pálya lemásolása
 		int counter = 0;
 		// int counter2 = 0;
@@ -187,7 +195,9 @@ public class Game {
 		// max-1,max-1 rõl indul
 		
 		while(spreadAsterisks(levelCopy)) {
-			//draw2DArray(levelCopy);
+			if(drawAsterisks) {
+			draw2DArray(levelCopy);
+			}
 		}
 		//draw2DArray(levelCopy);
 		//pályamásolat vizsgálata: maradt-e szóköz valahol
