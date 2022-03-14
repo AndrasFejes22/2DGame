@@ -8,21 +8,28 @@ public class Game {
     static int width = 20;
     static int powerUpInLevel = height;
     static final int  GAME_LOOP_NUMBER = 300;
-    //static Random RANDOM = new Random(); //ha ez = new Random(100L); akkor nem változik a pálya mert álvéletlen számokat generál
+    static Random RANDOM = new Random(); //ha ez = new Random(100L); akkor nem változik a pálya mert álvéletlen számokat generál
     //static Random RANDOM = new Random(160L);
-    static Random RANDOM = new Random(100L); //100L (1,4) 20,20
+    //static Random RANDOM = new Random(27L); //100L (1,4) 20,20
     public static void main(String[] args) throws InterruptedException {
     	
     	//game area
         String[][] level = new String[height][width];
         //draw the level: --initlevel method //drawing random walls
-        
+        int isPassableCounter = 0;
         do {
         	initLevel(level);
-            addRandomWalls(level, 1, 4);
+            addRandomWalls(level, 10, 10);
+            isPassableCounter++;
         }while(!isPassable(level));
         
-        //System.exit(0);
+        System.out.println("The No " + isPassableCounter + " board is passable");
+        ////////VIZSGÁLAT ELEJE///////
+        //ez a 2 sor csak azt vizsgálja, hogy hányadik generálásra kapunk átjárható pályát, a fõ programban nem kell
+        draw2DArray(level);
+        System.exit(0);
+        ////////VIZSGÁLAT VÉGE///////
+        
         //Who win?
         GameResult gameResult = GameResult.TIE;
     	
@@ -158,10 +165,10 @@ public class Game {
     //Csak olyan pályát rajzoljon amiben nincsenek zárt terek:
     
     
-	private static boolean isPassable(String[][] level) {
+	static boolean isPassable(String[][] level) {
 		// pálya lemásolása
 		int counter = 0;
-		int counter2 = 0;
+		// int counter2 = 0;
 		String[][] levelCopy = copy(level);// 2D array lemásolása
 		// elsõ szóköz megkeresése és *-al történõ helyettesítése
 		outer: for (int row = 0; row < height; row++) {
@@ -170,6 +177,7 @@ public class Game {
 					levelCopy[row][column] = "*";
 					counter++;
 					break outer;
+					// break;
 				}
 			}
 		}
@@ -177,13 +185,37 @@ public class Game {
 		// stars spreading
 		// nem tud alul/felülindexelõdni mert szélsõséges esetben 1,1-rõl vagy
 		// max-1,max-1 rõl indul
+		
+		while(spreadAsterisks(levelCopy)) {
+			//draw2DArray(levelCopy);
+		}
+		//draw2DArray(levelCopy);
+		//pályamásolat vizsgálata: maradt-e szóköz valahol
+		
 		for (int row = 0; row < height; row++) {
-			counter2++;
+			for (int column = 0; column < width; column++) {
+				if (levelCopy[row][column].equals(" ")) {
+					return false;
+				}
+			}
+		}
+		
+		//System.exit(0);
+		//return false;
+		return true;
+		
+	}
+
+	private static boolean spreadAsterisks(String[][] levelCopy) {
+		boolean changed = false;
+
+		for (int row = 0; row < height; row++) {
+
+			// counter2++;
 			for (int column = 0; column < width; column++) {
 				
-				boolean changed = false;
 				// a körülötte lévõ helyekre *-ot rak (amíg tud)
-				if ("*".equals(levelCopy[row][column])) {
+				if ("*".equals(levelCopy[row][column])) {// * van valahol
 					if (" ".equals(levelCopy[row - 1][column])) {
 						levelCopy[row - 1][column] = "*";
 						changed = true;
@@ -200,30 +232,11 @@ public class Game {
 						levelCopy[row][column + 1] = "*";
 						changed = true;
 					}
-				}
-				if(changed) {
-					draw2DArray(levelCopy);
+
 				}
 			}
 		}
-			//draw2DArray(levelCopy);
-			/*
-			 * for (int row2 = 0; row2 < height; row2++) { for (int column2 = 0; column2 <
-			 * width; column2++) { System.out.print(levelCopy[row2][column2]); }
-			 * System.out.println(); }
-			 */
-			System.out.println("----" + counter2 + "----");
-    	
-    	
-    	//prorgram leállítása
-    	
-    	System.out.println("counter: " + counter);
-    	//System.out.println("levelCopy[15][13]: "+levelCopy[15][13]);
-    	//System.out.println("levelCopy[15][13]: "+levelCopy[15][14]);
-    	//System.out.println("levelCopy[16][14]: "+levelCopy[16][14]);
-    	System.exit(0);
-		return false;
-		
+		return changed;
 	}
     
     
@@ -487,11 +500,13 @@ public class Game {
     		for (int column = 0; column < width; column++) {
     			if(level[row][column].equals(str));
     			return false;
+    			}
             }
+    	return true;
     	}
-		return true;
+		
 
-    }
+    
 
     //pálya és játékosok kirajzolása
     public static void draw(String[][] board, String playerMark, int playerRow, int playerColumn, String enemyMark, int enemyRow, int enemyColumn, 
