@@ -19,20 +19,25 @@ public class Game {
         int isPassableCounter = 0;
         do {
         	initLevel(level);
-            addRandomWalls(level, 10, 10);
+            //addRandomWalls(level, 10, 10);
+            addRandomWalls(level, 5, 6);
             isPassableCounter++;
         }while(!isPassable(level));
         
         System.out.println("The No " + isPassableCounter + " board is passable");
+        
+        ////////DRAW ASTERISKS OR NOT/////////
         //overloaded isPassable() kirajzolja-e a csillagokat
-        isPassable(level, true);
+        //isPassable(level, true);
+        isPassable(level, false);
         
         ////////VIZSGÁLAT ELEJE///////
         //ez a 2 sor csak azt vizsgálja, hogy hányadik generálásra kapunk átjárható pályát, a fõ programban nem kell
-        draw2DArray(level);
-        System.exit(0);
+        //draw2DArray(level);
+        //System.exit(0);
         ////////VIZSGÁLAT VÉGE///////
         
+   
         //Who win?
         GameResult gameResult = GameResult.TIE;
     	
@@ -44,6 +49,10 @@ public class Game {
     	int[] playerStartingCoordinates = getRandomStartingCoordinates(level);
     	int playerRow = playerStartingCoordinates[0];
     	int playerColumn = playerStartingCoordinates[1];
+    	//random first coordinates for the player when escapeing
+    	int[] playerEscapeCoordinates = getFarthestCorner(level, playerRow, playerColumn);
+    	int playerEscapeRow = playerEscapeCoordinates[0];
+    	int playerEscapeColumn = playerEscapeCoordinates[1];
     	
     	//enemy
     	Direction enemyDirection = Direction.LEFT; //First, the player moving to the right
@@ -52,6 +61,10 @@ public class Game {
     	int[] enemyStartingCoordinates = getRandomStartingCoordinatesForADistance(level, playerStartingCoordinates, 10);
     	int enemyRow = enemyStartingCoordinates[0];
     	int enemyColumn = enemyStartingCoordinates[1];
+    	//random first coordinates for the enemy when escapeing
+    	int[] enemyEscapeCoordinates = getFarthestCorner(level, enemyRow, enemyColumn);
+    	int enemyEscapeRow = enemyEscapeCoordinates[0];
+    	int enemyEscapeColumn = enemyEscapeCoordinates[1];
     	
     	//power-up
     	
@@ -67,32 +80,57 @@ public class Game {
 
 
         for(int iterationNumber = 1; iterationNumber < GAME_LOOP_NUMBER; iterationNumber++) {//lépteti a karaktert -->makeMove method
+        	///////UPDATED PLAYER MOVING////////
             //player irányváltoztatása
 			if (powerUpActive) {//powerup aktív = a játékos kergeti az enemyt
-				playerDirection = changeDirectionTowards(level, playerDirection, playerRow, playerColumn, enemyRow, enemyColumn);
+				//valami felé lép, ez még nem okos
+				//playerDirection = changeDirectionTowards(level, playerDirection, playerRow, playerColumn, enemyRow, enemyColumn);
+				//okosan megy a powerUp felé:
+				playerDirection = getShortestPath(level, playerDirection, playerRow, playerColumn, enemyRow, enemyColumn);
 						
 			} else {
 				if(powerUpPresentOnLevel) {
-					playerDirection = changeDirectionTowards(level, playerDirection, playerRow, playerColumn, powerUpRow, powerUpColumn);
+					//playerDirection = changeDirectionTowards(level, playerDirection, playerRow, playerColumn, powerUpRow, powerUpColumn);
+					playerDirection = getShortestPath(level, playerDirection, playerRow, playerColumn, powerUpRow, powerUpColumn);
 				
 				}else{
-					if (iterationNumber % 15 == 0) {
-						playerDirection = changeDirection(playerDirection);// 15 looponként derékszögû irányváltoztatás =
-					}														// körkörös mozgás
+					//player menekül:
+					if (iterationNumber % 50 == 0) {//választás 50 lépésenként
+						//inkább meneküljön a legtávolabbi pontba:
+						playerEscapeCoordinates = getFarthestCorner(level, playerRow, playerColumn);
+						playerEscapeRow = playerEscapeCoordinates[0];
+						playerEscapeColumn = playerEscapeCoordinates[1];
+					}
+					playerDirection = getShortestPath(level, playerDirection, playerRow, playerColumn, playerEscapeRow, playerEscapeColumn);// minden körben derékszögû irányváltoztatás 
 				}
 			}
             //kiszedjük a koordinátákat és átadjuk a draw()-nak
             //ez a 3 sor a léptetése a playernek
-            int[] playerCoordinates = makeMove(playerDirection, level,playerRow, playerColumn);
+            int[] playerCoordinates = makeMove(playerDirection, level, playerRow, playerColumn);
             playerRow = playerCoordinates[0];
             playerColumn = playerCoordinates[1];
+            
+            ///////UPDATED ENEMY MOVING////////
 
             //enemy irányváltoztatása: ez nincs benne if blokkban mert leköveti a player mozgását, (utánamegy), tehát a player mozgása vezérli
             if (powerUpActive) {
-            Direction directionTowardsPlayer = changeDirectionTowards(level, enemyDirection, enemyRow, enemyColumn, playerRow, playerColumn);
-            enemyDirection = getEscapeDirection(level, enemyRow, enemyColumn, directionTowardsPlayer);
+            	//régi mozgás:
+            	//Direction directionTowardsPlayer = changeDirectionTowards(level, enemyDirection, enemyRow, enemyColumn, playerRow, playerColumn);
+            	//enemyDirection = getEscapeDirection(level, enemyRow, enemyColumn, directionTowardsPlayer);
+            	
+            	//enemy menekül
+            	if(iterationNumber % 50 == 0) {//választás 50 lépésenként
+            		enemyEscapeCoordinates = getFarthestCorner(level, enemyRow, enemyColumn);
+            		enemyEscapeRow = enemyEscapeCoordinates[0];
+            		enemyEscapeColumn = enemyEscapeCoordinates[1];
+                	
+            	}	
+            	enemyDirection = getShortestPath(level, enemyDirection, enemyRow, enemyColumn, enemyEscapeRow, enemyEscapeColumn);
             }else {
-            	enemyDirection = changeDirectionTowards(level, enemyDirection, enemyRow, enemyColumn, playerRow, playerColumn);
+            	//enemyDirection = changeDirectionTowards(level, enemyDirection, enemyRow, enemyColumn, playerRow, playerColumn);
+            	//felokosítva:
+            	//enemy üldöz:
+            	enemyDirection = getShortestPath(level, enemyDirection, enemyRow, enemyColumn, playerRow, playerColumn);
             }
             //enemy léptetése:
             //kiszedjük a koordinátákat és átadjuk a draw()-nak
@@ -108,7 +146,8 @@ public class Game {
             }else {
             powerUpPresenceCounter++;//minden iterációban növeljük eggyel a számlálót
             }
-            if(powerUpPresenceCounter >= powerUpInLevel/2) {//ez*
+            //powerUpPresenceCounter mennyi ideig van a pályán
+            if(powerUpPresenceCounter >= powerUpInLevel) {//ez*
             	if(powerUpPresentOnLevel) {//jelen van, és fog kapni random koordinátákat
             		powerUpStartingCoordinates = getRandomStartingCoordinates(level);
                 	powerUpRow = powerUpStartingCoordinates[0];
@@ -118,7 +157,7 @@ public class Game {
             	powerUpPresenceCounter = 0; //*meg ez csinálja hogy mindig elõlrõl kezdõdhessen a számlálás és 20 körig van pUp, 20 körig nincs
             	//és így tovább
             }
-            if(powerUpActiveCounter >= powerUpInLevel) {
+            if(powerUpActiveCounter >= powerUpInLevel*2) {
             	powerUpActive = false;
             	powerUpActiveCounter = 0;
             	powerUpStartingCoordinates = getRandomStartingCoordinates(level);
@@ -165,6 +204,38 @@ public class Game {
         }	
     }//main end
     
+    
+    
+    
+
+	private static int[] getFarthestCorner(String[][] level, int fromRow, int fromColumn) {
+		// pálya lemásolása
+		String[][] levelCopy = copy(level);// 2D array(pálya) lemásolása
+		// elsõ csillag lehelyezése
+    	levelCopy[fromRow][fromColumn] = "*";
+    	
+    	int farthestRow = 0;
+    	int farthestColumn = 0;
+    	
+    	while(spreadAsterisksWithCheck(levelCopy)) {
+    		outer: for (int row = 0; row < height; row++) {
+    			for (int column = 0; column < width; column++) {
+    				if (levelCopy[row][column].equals(" ")) {
+    					farthestRow = row;
+    			    	farthestColumn = column;
+    			    	break outer;
+    				}
+    			}
+    		}
+    	}
+		return new int[] {farthestRow, farthestColumn};
+	}
+
+
+
+
+
+	//rajzolja-e a csillagok terjedését
     static boolean isPassable(String[][] level) {
 		return isPassable(level, false);
 		
@@ -175,15 +246,13 @@ public class Game {
     
 	static boolean isPassable(String[][] level, boolean drawAsterisks) {
 		// pálya lemásolása
-		int counter = 0;
-		// int counter2 = 0;
 		String[][] levelCopy = copy(level);// 2D array lemásolása
 		// elsõ szóköz megkeresése és *-al történõ helyettesítése
 		outer: for (int row = 0; row < height; row++) {
 			for (int column = 0; column < width; column++) {
 				if (levelCopy[row][column].equals(" ")) {
 					levelCopy[row][column] = "*";
-					counter++;
+					
 					break outer;
 					// break;
 				}
@@ -215,13 +284,83 @@ public class Game {
 		return true;
 		
 	}
+	
+	//UPDATED PLAYER MOVING
+	//Az út megtalálása a terjedõ csillagok method visszafelé
+	//A *-ok ugyanis mindig a legrövidebb irányban terjednek
+    static Direction getShortestPath(String[][]level, Direction defaultDirection, int fromRow, int fromColumn, int toRow, int toColumn) {
+    	// pálya lemásolása:
+    	String[][] levelCopy = copy(level);// 2D array lemásolása
+    	// elsõ csillag lehelyezése
+    	levelCopy[toRow][toColumn] = "*";
+    	while(spreadAsterisksWithCheck(levelCopy)) {
+			if("*".equals(levelCopy[fromRow -1][fromColumn])) {//ha a visszafelé terjedõ csillagok közül az elsõ felülrõl 
+				//jelent meg akkor felfele megyünk*
+				return Direction.UP;
+			}
+			if("*".equals(levelCopy[fromRow +1][fromColumn])) {//ha a visszafelé terjedõ csillagok közül az elsõ alulról 
+				//jelent meg akkor lefele megyünk*
+				return Direction.DOWN;
+			}
+			if("*".equals(levelCopy[fromRow][fromColumn -1])) {//ha a visszafelé terjedõ csillagok közül az elsõ balról 
+				//jelent meg akkor balra megyünk*
+				return Direction.LEFT;
+			}
+			if("*".equals(levelCopy[fromRow][fromColumn+1])) {//ha a visszafelé terjedõ csillagok közül az elsõ jobbra 
+				//jelent meg akkor jobbra megyünk*
+				return Direction.RIGHT;
+			}
+		}
+		return defaultDirection;
+    	
+    }
+	
+	private static boolean spreadAsterisksWithCheck(String[][] levelCopy) {
+		boolean[][] mask = new boolean [height][width]; //alapértelmezetten csupa false-val van tele
+		//végigmegyek a levelCopy-n, és ha találok valahol csillagot, ott a mask-ot true-ra állítom:
+		for (int row = 0; row < height; row++) {
+    		for (int column = 0; column < width; column++) {
+    			if ("*".equals(levelCopy[row][column])) {
+					mask[row][column] = true;
+					
+				}
+            }
+    	}
+		boolean changed = false;
+		for (int row = 0; row < height; row++) {
+
+			for (int column = 0; column < width; column++) {
+				
+				// a körülötte lévõ helyekre *-ot rak (amíg tud)
+				if ("*".equals(levelCopy[row][column]) && mask[row][column]) {// * van valahol ÉS a mask az true
+					if (" ".equals(levelCopy[row - 1][column])) {
+						levelCopy[row - 1][column] = "*";
+						changed = true;//ez így mindig csak 1-et lép
+					}
+					if (" ".equals(levelCopy[row + 1][column])) {
+						levelCopy[row + 1][column] = "*";
+						changed = true;
+					}
+					if (" ".equals(levelCopy[row][column - 1])) {
+						levelCopy[row][column - 1] = "*";
+						changed = true;
+					}
+					if (" ".equals(levelCopy[row][column + 1])) {// levelCopy[1][4]:" "
+						levelCopy[row][column + 1] = "*";
+						changed = true;
+					}
+
+				}
+			}
+		}
+		return changed;
+	}
 
 	private static boolean spreadAsterisks(String[][] levelCopy) {
 		boolean changed = false;
 
 		for (int row = 0; row < height; row++) {
 
-			// counter2++;
 			for (int column = 0; column < width; column++) {
 				
 				// a körülötte lévõ helyekre *-ot rak (amíg tud)
@@ -535,12 +674,14 @@ public class Game {
             }
             System.out.println();
         }
+        /*
         if(powerUpActive) {
         	System.out.println("power-up is active!");
         }
         if(powerUpPresentOnLevel) {
         	System.out.println("power-up is on the board!");
         }
+        */
     }
 }
 
